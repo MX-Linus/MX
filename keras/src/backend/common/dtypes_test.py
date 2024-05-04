@@ -57,6 +57,14 @@ class DtypesTest(test_case.TestCase, parameterized.TestCase):
     def test_result_type_with_tensor(self, dtype1, dtype2):
         import jax.numpy as jnp
 
+        from keras import backend
+
+        # Skip float64 tests for MLX backend because it is not supported.
+        if (
+            dtype1 == "float64" or dtype2 == "float64"
+        ) and backend.backend() == "mlx":
+            self.skipTest("Unsupported dtype for MLX: float64")
+
         x1 = ops.ones((1,), dtype=dtype1)
         x2 = ops.ones((1,), dtype=dtype2)
         x1_jax = jnp.ones((1,), dtype=dtype1)
@@ -221,11 +229,13 @@ class DtypesTest(test_case.TestCase, parameterized.TestCase):
             ):
                 dtypes._least_upper_bound("test_dtype1", "test_dtype2")
 
-    def test_invalid_float8_dtype(self):
+    def test_invalid_float8_dtype_e4m3fn(self):
         with self.assertRaisesRegex(
             ValueError, "There is no implicit conversions from float8 dtypes"
         ):
             dtypes.result_type("float8_e4m3fn", "bfloat16")
+
+    def test_invalid_float8_dtype_e5m2(self):
         with self.assertRaisesRegex(
             ValueError, "There is no implicit conversions from float8 dtypes"
         ):

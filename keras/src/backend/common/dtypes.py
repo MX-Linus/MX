@@ -141,9 +141,16 @@ def _least_upper_bound(*nodes):
         bounds = [UB[n] for n in N]
     except KeyError:
         dtype = next(n for n in N if n not in UB)
-        raise ValueError(
-            f"{dtype=} is not a valid dtype for Keras type promotion."
-        )
+        # Special handling for float8 types
+        if dtype.startswith("float8"):
+            raise ValueError(
+                "There is no implicit conversions from float8 dtypes to others."
+                f" You must cast it internally. Received dtype='{dtype}'"
+            )
+        else:
+            raise ValueError(
+                f"{dtype=} is not a valid dtype for Keras type promotion."
+            )
     CUB = set.intersection(*bounds)
     LUB = (CUB & N) or {c for c in CUB if CUB.issubset(UB[c])}
     if len(LUB) == 1:
@@ -300,12 +307,11 @@ def result_type(*dtypes):
         # If no dtypes provided, default to floatx, this matches
         # `ops.convert_to_tensor([])`
         return config.floatx()
+
+    standardized_dtypes = []
     for dtype in dtypes:
-        if dtype in FLOAT8_TYPES:
-            raise ValueError(
-                "There is no implicit conversions from float8 dtypes to others."
-                f" You must cast it internally. Received: {dtypes}"
-            )
+        if dtype is None:
+            standardized_dtypes.append(config.floatx())
     return _lattice_result_type(
-        *(config.floatx() if arg is None else arg for arg in dtypes),
+        *(config.floatx() if arg is None else arg for arg in dtypes)
     )

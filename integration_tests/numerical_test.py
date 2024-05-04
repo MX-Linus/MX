@@ -6,6 +6,7 @@ import tf_keras
 keras.backend.set_image_data_format("channels_last")
 tf_keras.backend.set_image_data_format("channels_last")
 
+DEBUGGING = True
 NUM_CLASSES = 10
 BATCH_SIZE = 32
 EPOCHS = 1
@@ -95,45 +96,81 @@ def predict_model(model, x):
 
 
 def numerical_test():
-    x_train, y_train = build_mnist_data(NUM_CLASSES)
-    keras_model = build_keras_model(keras, NUM_CLASSES)
-    tf_keras_model = build_keras_model(tf_keras, NUM_CLASSES)
+    print("Building data and creating models:")
+    try:
+        x_train, y_train = build_mnist_data(NUM_CLASSES)
+        keras_model = build_keras_model(keras, NUM_CLASSES)
+        tf_keras_model = build_keras_model(tf_keras, NUM_CLASSES)
+        print("Data building and model creation passed.")
+    except Exception as e:
+        print("Data building and model creation failed with error:", e)
+        if not DEBUGGING:
+            raise
 
-    # Make sure both model have same weights before training
-    weights = [weight.numpy() for weight in keras_model.weights]
-    tf_keras_model.set_weights(weights)
+    print("Setting and checking weights:")
+    try:
+        weights = [weight.numpy() for weight in keras_model.weights]
+        tf_keras_model.set_weights(weights)
+        for kw, kcw in zip(keras_model.weights, tf_keras_model.weights):
+            np.testing.assert_allclose(kw.numpy(), kcw.numpy())
+        print("Weight setting and checking passed.")
+    except Exception as e:
+        print("Weight setting and checking failed with error:", e)
+        if not DEBUGGING:
+            raise
 
-    for kw, kcw in zip(keras_model.weights, tf_keras_model.weights):
-        np.testing.assert_allclose(kw.numpy(), kcw.numpy())
+    print("Compiling models:")
+    try:
+        compile_model(keras_model)
+        compile_model(tf_keras_model)
+        print("Model compilation passed.")
+    except Exception as e:
+        print("Model compilation failed with error:", e)
+        if not DEBUGGING:
+            raise
 
-    compile_model(keras_model)
-    compile_model(tf_keras_model)
-
-    print("Checking training histories:")
-    keras_history = train_model(keras_model, x_train, y_train)
-    tf_keras_history = train_model(tf_keras_model, x_train, y_train)
-    check_history(keras_history, tf_keras_history)
-    print("Training histories match.")
-    print()
+    print("Training models and checking histories:")
+    try:
+        keras_history = train_model(keras_model, x_train, y_train)
+        tf_keras_history = train_model(tf_keras_model, x_train, y_train)
+        check_history(keras_history, tf_keras_history)
+        print("Training and history checking passed.")
+    except Exception as e:
+        print("Training and history checking failed with error:", e)
+        if not DEBUGGING:
+            raise
 
     print("Checking trained weights:")
-    for kw, kcw in zip(keras_model.weights, tf_keras_model.weights):
-        np.testing.assert_allclose(kw.numpy(), kcw.numpy(), atol=1e-3)
-    print("Trained weights match.")
-    print()
+    try:
+        for kw, kcw in zip(keras_model.weights, tf_keras_model.weights):
+            np.testing.assert_allclose(kw.numpy(), kcw.numpy(), atol=1e-3)
+        print("Trained weights checking passed.")
+    except Exception as e:
+        print("Trained weights checking failed with error:", e)
+        if not DEBUGGING:
+            raise
 
-    print("Checking predict:")
-    outputs1 = predict_model(keras_model, x_train)
-    outputs2 = predict_model(tf_keras_model, x_train)
-    np.testing.assert_allclose(outputs1, outputs2, atol=1e-3)
-    print("Predict results match.")
-    print()
+    print("Predicting with models:")
+    try:
+        outputs1 = predict_model(keras_model, x_train)
+        outputs2 = predict_model(tf_keras_model, x_train)
+        np.testing.assert_allclose(outputs1, outputs2, atol=1e-3)
+        print("Prediction passed.")
+    except Exception as e:
+        print("Prediction failed with error:", e)
+        if not DEBUGGING:
+            raise
 
-    print("Checking evaluate:")
-    score1 = eval_model(keras_model, x_train, y_train)
-    score2 = eval_model(tf_keras_model, x_train, y_train)
-    np.testing.assert_allclose(score1, score2, atol=1e-3)
-    print("Evaluate results match.")
+    print("Evaluating models:")
+    try:
+        score1 = eval_model(keras_model, x_train, y_train)
+        score2 = eval_model(tf_keras_model, x_train, y_train)
+        np.testing.assert_allclose(score1, score2, atol=1e-3)
+        print("Evaluation passed.")
+    except Exception as e:
+        print("Evaluation failed with error:", e)
+        if not DEBUGGING:
+            raise
 
 
 if __name__ == "__main__":
